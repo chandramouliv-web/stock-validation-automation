@@ -81,12 +81,6 @@ hr {
   margin-bottom: 30px;
 }
 
-.success {
-
-  color: green;
-  font-weight: bold;
-}
-
 </style>
 
 </head>
@@ -104,15 +98,6 @@ hr {
 <option>SG</option>
 <option>MY</option>
 <option>PH</option>
-
-</select>
-
-<label>Tracker Sheet</label>
-
-<select id="trackerSheet">
-
-<option>Main</option>
-<option>Sheet2</option>
 
 </select>
 
@@ -159,7 +144,9 @@ id="progressBar">
 
 <br>
 
-<div class="logs" id="logs">
+<div
+class="logs"
+id="logs">
 
 Waiting...
 
@@ -170,7 +157,7 @@ Waiting...
 <script>
 
 const API_URL =
-"https://script.google.com/macros/s/PASTE_YOUR_SCRIPT_ID/exec";
+"https://script.google.com/a/macros/graas.ai/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
 
 function log(message) {
 
@@ -200,11 +187,21 @@ function readFile(file) {
       new FileReader();
 
     reader.onload =
-      (e) => resolve(e.target.result);
+      (e) => {
+
+        resolve(
+          e.target.result
+        );
+      };
 
     reader.readAsText(file);
+
   });
 }
+
+// =====================================
+// DYNAMIC TRACKER COLUMNS
+// =====================================
 
 document
   .getElementById("tracker")
@@ -235,6 +232,7 @@ document
         document.getElementById("launchColumn");
 
       ecomDropdown.innerHTML = "";
+
       launchDropdown.innerHTML = "";
 
       headers.forEach(function(header, index) {
@@ -242,24 +240,34 @@ document
         const option1 =
           document.createElement("option");
 
-        option1.value = index;
-        option1.text = header;
+        option1.value =
+          index;
+
+        option1.text =
+          header;
 
         ecomDropdown.appendChild(option1);
 
         const option2 =
           document.createElement("option");
 
-        option2.value = index;
-        option2.text = header;
+        option2.value =
+          index;
+
+        option2.text =
+          header;
 
         launchDropdown.appendChild(option2);
+
       });
 
       log("Tracker Columns Loaded");
-
     }
   );
+
+// =====================================
+// RUN VALIDATION
+// =====================================
 
 async function runValidation() {
 
@@ -282,7 +290,9 @@ async function runValidation() {
     !contentFile
   ) {
 
-    alert("Please upload all files");
+    alert(
+      "Please Upload All Files"
+    );
 
     return;
   }
@@ -294,34 +304,39 @@ async function runValidation() {
     log("Reading Sales File");
 
     const sales =
-      await readFile(salesFile);
+      await readFile(
+        salesFile
+      );
 
     setProgress(20);
 
     log("Reading Inventory File");
 
     const inventory =
-      await readFile(inventoryFile);
+      await readFile(
+        inventoryFile
+      );
 
     setProgress(30);
 
     log("Reading Tracker File");
 
     const tracker =
-      await readFile(trackerFile);
+      await readFile(
+        trackerFile
+      );
 
     setProgress(40);
 
     log("Reading Content File");
 
     const content =
-      await readFile(contentFile);
+      await readFile(
+        contentFile
+      );
 
     const region =
       document.getElementById("region").value;
-
-    const trackerSheet =
-      document.getElementById("trackerSheet").value;
 
     const ecomColumn =
       Number(
@@ -338,37 +353,41 @@ async function runValidation() {
     log("Sending Data To API");
 
     const response =
-      await fetch(API_URL, {
+      await fetch(
+        API_URL,
+        {
 
-        method: "POST",
+          method: "POST",
 
-        body: JSON.stringify({
+          body:
+            JSON.stringify({
 
-          sales,
-          inventory,
-          tracker,
-          content,
-          region,
-          trackerSheet,
-          ecomColumn,
-          launchColumn
+              sales,
+              inventory,
+              tracker,
+              content,
+              region,
+              ecomColumn,
+              launchColumn
 
-        })
-
-      });
+            })
+        }
+      );
 
     setProgress(80);
 
-    log("Generating CSV Output");
+    log("Generating Output");
 
     const csv =
       await response.text();
 
     const blob =
-      new Blob([csv], {
-
-        type: "text/csv"
-      });
+      new Blob(
+        [csv],
+        {
+          type: "text/csv"
+        }
+      );
 
     const url =
       window.URL.createObjectURL(blob);
@@ -391,15 +410,18 @@ async function runValidation() {
 
     log("Validation Completed");
 
-    log("CSV Download Started");
-
   } catch(error) {
 
     console.error(error);
 
-    log("Error: " + error.message);
+    alert(
+      "Validation Failed"
+    );
 
-    alert("Validation Failed");
+    log(
+      "Error: " +
+      error.message
+    );
   }
 }
 
