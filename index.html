@@ -20,11 +20,12 @@ body{
 }
 
 .container{
-  max-width:1100px;
+  max-width:1200px;
   margin:auto;
   background:white;
   padding:30px;
   border-radius:12px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.1);
 }
 
 .grid{
@@ -33,12 +34,24 @@ body{
   gap:20px;
 }
 
+.field{
+  display:flex;
+  flex-direction:column;
+}
+
+label{
+  font-weight:bold;
+  margin-bottom:8px;
+}
+
 input,
 select,
 button{
   width:100%;
   padding:12px;
-  margin-top:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  font-size:14px;
 }
 
 button{
@@ -46,14 +59,27 @@ button{
   color:white;
   border:none;
   cursor:pointer;
+  margin-top:30px;
+  font-size:16px;
+  font-weight:bold;
+}
+
+button:hover{
+  background:#2d6cdf;
 }
 
 .logs{
-  margin-top:20px;
+  margin-top:30px;
   background:#f8f8f8;
-  height:220px;
+  height:250px;
   overflow:auto;
   padding:15px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+h2{
+  margin-bottom:30px;
 }
 
 </style>
@@ -68,34 +94,130 @@ button{
 
 <div class="grid">
 
-<div>
-<label>Sales ZIP/XLSX</label>
-<input type="file" id="sales">
+<!-- SALES -->
+
+<div class="field">
+
+<label>Sales ZIP / XLSX</label>
+
+<input
+type="file"
+id="sales"
+accept=".zip,.xlsx,.csv">
+
 </div>
 
-<div>
-<label>Basic Info</label>
-<input type="file" id="basicInfo">
+<!-- BASIC INFO -->
+
+<div class="field">
+
+<label>Basic Info XLSX / CSV</label>
+
+<input
+type="file"
+id="basicInfo"
+accept=".xlsx,.csv">
+
 </div>
 
-<div>
+<!-- INVENTORY -->
+
+<div class="field">
+
 <label>Inventory CSV</label>
-<input type="file" id="inventory">
+
+<input
+type="file"
+id="inventory"
+accept=".csv">
+
 </div>
 
-<div>
+<!-- PRODUCT MASTER -->
+
+<div class="field">
+
 <label>Product Master CSV</label>
-<input type="file" id="productMaster">
+
+<input
+type="file"
+id="productMaster"
+accept=".csv">
+
 </div>
 
-<div>
-<label>Tracker</label>
-<input type="file" id="tracker">
+<!-- TRACKER -->
+
+<div class="field">
+
+<label>Tracker XLSX / CSV</label>
+
+<input
+type="file"
+id="tracker"
+accept=".xlsx,.csv">
+
 </div>
 
-<div>
-<label>Content</label>
-<input type="file" id="content">
+<!-- TRACKER SHEET -->
+
+<div class="field">
+
+<label>Tracker Sheet</label>
+
+<select id="trackerSheet">
+
+<option value="">
+Select Sheet
+</option>
+
+</select>
+
+</div>
+
+<!-- ECOM COLUMN -->
+
+<div class="field">
+
+<label>Ecom Column</label>
+
+<select id="ecomColumn">
+
+<option value="">
+Select Ecom Column
+</option>
+
+</select>
+
+</div>
+
+<!-- LAUNCH COLUMN -->
+
+<div class="field">
+
+<label>Launch Date Column</label>
+
+<select id="launchColumn">
+
+<option value="">
+Select Launch Column
+</option>
+
+</select>
+
+</div>
+
+<!-- CONTENT -->
+
+<div class="field">
+
+<label>Content XLSX / CSV</label>
+
+<input
+type="file"
+id="content"
+accept=".xlsx,.csv">
+
 </div>
 
 </div>
@@ -106,7 +228,9 @@ RUN VALIDATION
 
 </button>
 
-<div class="logs" id="logs">
+<div
+class="logs"
+id="logs">
 
 Waiting...
 
@@ -120,7 +244,7 @@ const API_URL =
 "https://script.google.com/a/macros/graas.ai/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
 
 // ======================================
-// LOG
+// LOGS
 // ======================================
 
 function log(msg){
@@ -132,10 +256,14 @@ function log(msg){
 
   logs.innerHTML +=
     "<br>✔ " + msg;
+
+  logs.scrollTop =
+    logs.scrollHeight;
+
 }
 
 // ======================================
-// BASE64
+// FILE TO BASE64
 // ======================================
 
 function fileToBase64(file){
@@ -157,7 +285,168 @@ function fileToBase64(file){
 }
 
 // ======================================
-// RUN
+// TRACKER ANALYSIS
+// ======================================
+
+document
+.getElementById("tracker")
+.addEventListener(
+  "change",
+  async function(e){
+
+    const file =
+      e.target.files[0];
+
+    if(!file) return;
+
+    log("Reading Tracker");
+
+    const data =
+      await file.arrayBuffer();
+
+    const workbook =
+      XLSX.read(data,{
+        type:"array"
+      });
+
+    // ==========================
+    // SHEETS
+    // ==========================
+
+    const sheetDropdown =
+      document.getElementById(
+        "trackerSheet"
+      );
+
+    sheetDropdown.innerHTML = "";
+
+    workbook.SheetNames
+    .forEach(function(sheet){
+
+      const option =
+        document.createElement(
+          "option"
+        );
+
+      option.value = sheet;
+      option.text = sheet;
+
+      sheetDropdown.appendChild(
+        option
+      );
+
+    });
+
+    // ==========================
+    // LOAD COLUMNS
+    // ==========================
+
+    loadTrackerColumns(
+      workbook
+    );
+
+    // ==========================
+    // CHANGE SHEET
+    // ==========================
+
+    sheetDropdown.onchange =
+      function(){
+
+        loadTrackerColumns(
+          workbook
+        );
+
+      };
+
+});
+
+// ======================================
+// LOAD TRACKER COLUMNS
+// ======================================
+
+function loadTrackerColumns(
+  workbook
+){
+
+  const selectedSheet =
+    document.getElementById(
+      "trackerSheet"
+    ).value;
+
+  const worksheet =
+    workbook.Sheets[
+      selectedSheet
+    ];
+
+  const json =
+    XLSX.utils.sheet_to_json(
+      worksheet,
+      {header:1}
+    );
+
+  const headers =
+    json[0] || [];
+
+  const ecomDropdown =
+    document.getElementById(
+      "ecomColumn"
+    );
+
+  const launchDropdown =
+    document.getElementById(
+      "launchColumn"
+    );
+
+  ecomDropdown.innerHTML = "";
+  launchDropdown.innerHTML = "";
+
+  headers.forEach(function(
+    header,
+    index
+  ){
+
+    // ECOM
+
+    const ecomOption =
+      document.createElement(
+        "option"
+      );
+
+    ecomOption.value = index;
+
+    ecomOption.text =
+      header || (
+        "Column " + index
+      );
+
+    ecomDropdown.appendChild(
+      ecomOption
+    );
+
+    // LAUNCH
+
+    const launchOption =
+      document.createElement(
+        "option"
+      );
+
+    launchOption.value = index;
+
+    launchOption.text =
+      header || (
+        "Column " + index
+      );
+
+    launchDropdown.appendChild(
+      launchOption
+    );
+
+  });
+
+}
+
+// ======================================
+// RUN VALIDATION
 // ======================================
 
 async function runValidation(){
@@ -195,6 +484,26 @@ async function runValidation(){
       document.getElementById(
         "content"
       ).files[0];
+
+    // ==========================
+    // VALIDATION
+    // ==========================
+
+    if(
+      !sales ||
+      !basicInfo ||
+      !inventory ||
+      !productMaster ||
+      !tracker ||
+      !content
+    ){
+
+      alert(
+        "Please upload all files"
+      );
+
+      return;
+    }
 
     log("Converting Files");
 
@@ -236,8 +545,24 @@ async function runValidation(){
 
       config:{
 
-        ecomColumn:2,
-        launchColumn:3
+        trackerSheet:
+          document.getElementById(
+            "trackerSheet"
+          ).value,
+
+        ecomColumn:
+          Number(
+            document.getElementById(
+              "ecomColumn"
+            ).value
+          ),
+
+        launchColumn:
+          Number(
+            document.getElementById(
+              "launchColumn"
+            ).value
+          )
 
       }
 
@@ -255,6 +580,8 @@ async function runValidation(){
         )
 
       });
+
+    log("Generating Output");
 
     const csv =
       await response.text();
@@ -279,13 +606,18 @@ async function runValidation(){
 
     a.click();
 
-    log("Completed");
+    log("Validation Completed");
 
-  }catch(error){
+  }
+
+  catch(error){
 
     console.error(error);
 
-    alert(error.message);
+    alert(
+      "Error : " +
+      error.message
+    );
 
   }
 
@@ -294,4 +626,5 @@ async function runValidation(){
 </script>
 
 </body>
+
 </html>
