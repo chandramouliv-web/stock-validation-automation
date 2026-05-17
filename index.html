@@ -16,7 +16,7 @@ body {
 
 .container {
 
-  max-width: 700px;
+  max-width: 750px;
   margin: auto;
   background: white;
   padding: 30px;
@@ -31,6 +31,7 @@ button {
   padding: 12px;
   margin-top: 10px;
   margin-bottom: 20px;
+  box-sizing: border-box;
 }
 
 button {
@@ -40,6 +41,11 @@ button {
   border: none;
   cursor: pointer;
   font-size: 16px;
+}
+
+button:hover {
+
+  background: #3367D6;
 }
 
 .progress {
@@ -56,15 +62,29 @@ button {
   height: 100%;
   width: 0%;
   background: #4285F4;
+  transition: width 0.3s;
 }
 
 .logs {
 
   background: #f8f8f8;
   padding: 15px;
-  height: 150px;
+  height: 180px;
   overflow: auto;
   font-size: 13px;
+  border: 1px solid #ddd;
+}
+
+hr {
+
+  margin-top: 30px;
+  margin-bottom: 30px;
+}
+
+.success {
+
+  color: green;
+  font-weight: bold;
 }
 
 </style>
@@ -96,26 +116,6 @@ button {
 
 </select>
 
-<label>Ecom Column Index</label>
-
-<select id="ecomColumn">
-
-<option value="1">Column B</option>
-<option value="2">Column C</option>
-<option value="3">Column D</option>
-
-</select>
-
-<label>Launch Date Column Index</label>
-
-<select id="launchColumn">
-
-<option value="2">Column C</option>
-<option value="3">Column D</option>
-<option value="4">Column E</option>
-
-</select>
-
 <hr>
 
 <label>Sales CSV</label>
@@ -129,6 +129,18 @@ button {
 
 <label>Content CSV</label>
 <input type="file" id="content">
+
+<hr>
+
+<label>Ecom Column</label>
+
+<select id="ecomColumn">
+</select>
+
+<label>Launch Date Column</label>
+
+<select id="launchColumn">
+</select>
 
 <button onclick="runValidation()">
 RUN VALIDATION
@@ -158,7 +170,7 @@ Waiting...
 <script>
 
 const API_URL =
-"https://script.google.com/a/macros/graas.ai/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
+"https://script.google.com/macros/s/PASTE_YOUR_SCRIPT_ID/exec";
 
 function log(message) {
 
@@ -194,109 +206,201 @@ function readFile(file) {
   });
 }
 
+document
+  .getElementById("tracker")
+  .addEventListener(
+    "change",
+    async function(event) {
+
+      log("Reading Tracker Headers");
+
+      const file =
+        event.target.files[0];
+
+      const text =
+        await readFile(file);
+
+      const firstLine =
+        text.split("\n")[0];
+
+      const headers =
+        firstLine
+          .replace(/\r/g, "")
+          .split(",");
+
+      const ecomDropdown =
+        document.getElementById("ecomColumn");
+
+      const launchDropdown =
+        document.getElementById("launchColumn");
+
+      ecomDropdown.innerHTML = "";
+      launchDropdown.innerHTML = "";
+
+      headers.forEach(function(header, index) {
+
+        const option1 =
+          document.createElement("option");
+
+        option1.value = index;
+        option1.text = header;
+
+        ecomDropdown.appendChild(option1);
+
+        const option2 =
+          document.createElement("option");
+
+        option2.value = index;
+        option2.text = header;
+
+        launchDropdown.appendChild(option2);
+      });
+
+      log("Tracker Columns Loaded");
+
+    }
+  );
+
 async function runValidation() {
 
-  setProgress(10);
+  const salesFile =
+    document.getElementById("sales").files[0];
 
-  log("Reading Sales File");
+  const inventoryFile =
+    document.getElementById("inventory").files[0];
 
-  const sales =
-    await readFile(
-      document.getElementById("sales").files[0]
-    );
+  const trackerFile =
+    document.getElementById("tracker").files[0];
 
-  setProgress(20);
+  const contentFile =
+    document.getElementById("content").files[0];
 
-  log("Reading Inventory File");
+  if (
+    !salesFile ||
+    !inventoryFile ||
+    !trackerFile ||
+    !contentFile
+  ) {
 
-  const inventory =
-    await readFile(
-      document.getElementById("inventory").files[0]
-    );
+    alert("Please upload all files");
 
-  setProgress(30);
+    return;
+  }
 
-  log("Reading Tracker File");
+  try {
 
-  const tracker =
-    await readFile(
-      document.getElementById("tracker").files[0]
-    );
+    setProgress(10);
 
-  setProgress(40);
+    log("Reading Sales File");
 
-  log("Reading Content File");
+    const sales =
+      await readFile(salesFile);
 
-  const content =
-    await readFile(
-      document.getElementById("content").files[0]
-    );
+    setProgress(20);
 
-  const region =
-    document.getElementById("region").value;
+    log("Reading Inventory File");
 
-  const ecomColumn =
-    Number(
-      document.getElementById("ecomColumn").value
-    );
+    const inventory =
+      await readFile(inventoryFile);
 
-  const launchColumn =
-    Number(
-      document.getElementById("launchColumn").value
-    );
+    setProgress(30);
 
-  setProgress(50);
+    log("Reading Tracker File");
 
-  log("Running Validation Engine");
+    const tracker =
+      await readFile(trackerFile);
 
-  const response =
-    await fetch(API_URL, {
+    setProgress(40);
 
-      method: "POST",
+    log("Reading Content File");
 
-      body: JSON.stringify({
+    const content =
+      await readFile(contentFile);
 
-        sales,
-        inventory,
-        tracker,
-        content,
-        region,
-        ecomColumn,
-        launchColumn
+    const region =
+      document.getElementById("region").value;
 
-      })
+    const trackerSheet =
+      document.getElementById("trackerSheet").value;
 
-    });
+    const ecomColumn =
+      Number(
+        document.getElementById("ecomColumn").value
+      );
 
-  setProgress(80);
+    const launchColumn =
+      Number(
+        document.getElementById("launchColumn").value
+      );
 
-  log("Generating CSV Output");
+    setProgress(50);
 
-  const csv =
-    await response.text();
+    log("Sending Data To API");
 
-  const blob =
-    new Blob([csv], {
+    const response =
+      await fetch(API_URL, {
 
-      type: "text/csv"
-    });
+        method: "POST",
 
-  const url =
-    window.URL.createObjectURL(blob);
+        body: JSON.stringify({
 
-  const a =
-    document.createElement("a");
+          sales,
+          inventory,
+          tracker,
+          content,
+          region,
+          trackerSheet,
+          ecomColumn,
+          launchColumn
 
-  a.href = url;
+        })
 
-  a.download =
-    "validation_output.csv";
+      });
 
-  a.click();
+    setProgress(80);
 
-  setProgress(100);
+    log("Generating CSV Output");
 
-  log("Validation Completed");
+    const csv =
+      await response.text();
+
+    const blob =
+      new Blob([csv], {
+
+        type: "text/csv"
+      });
+
+    const url =
+      window.URL.createObjectURL(blob);
+
+    const a =
+      document.createElement("a");
+
+    a.href = url;
+
+    a.download =
+      "validation_output.csv";
+
+    document.body.appendChild(a);
+
+    a.click();
+
+    a.remove();
+
+    setProgress(100);
+
+    log("Validation Completed");
+
+    log("CSV Download Started");
+
+  } catch(error) {
+
+    console.error(error);
+
+    log("Error: " + error.message);
+
+    alert("Validation Failed");
+  }
 }
 
 </script>
