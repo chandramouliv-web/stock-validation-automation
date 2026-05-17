@@ -5,6 +5,10 @@
 
 <title>Stock Validation PRO</title>
 
+<meta charset="UTF-8">
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+
 <style>
 
 body {
@@ -16,11 +20,22 @@ body {
 
 .container {
 
-  max-width: 750px;
+  max-width: 800px;
   margin: auto;
   background: white;
   padding: 30px;
   border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h2 {
+
+  margin-bottom: 30px;
+}
+
+label {
+
+  font-weight: bold;
 }
 
 input,
@@ -32,6 +47,7 @@ button {
   margin-top: 10px;
   margin-bottom: 20px;
   box-sizing: border-box;
+  font-size: 14px;
 }
 
 button {
@@ -73,6 +89,7 @@ button:hover {
   overflow: auto;
   font-size: 13px;
   border: 1px solid #ddd;
+  border-radius: 5px;
 }
 
 hr {
@@ -104,16 +121,16 @@ hr {
 <hr>
 
 <label>Sales CSV</label>
-<input type="file" id="sales">
+<input type="file" id="sales" accept=".csv">
 
 <label>Inventory CSV</label>
-<input type="file" id="inventory">
+<input type="file" id="inventory" accept=".csv">
 
-<label>Tracker CSV</label>
-<input type="file" id="tracker">
+<label>Tracker XLSX / CSV</label>
+<input type="file" id="tracker" accept=".xlsx,.csv">
 
 <label>Content CSV</label>
-<input type="file" id="content">
+<input type="file" id="content" accept=".csv">
 
 <hr>
 
@@ -156,8 +173,16 @@ Waiting...
 
 <script>
 
+// =====================================
+// REPLACE THIS URL
+// =====================================
+
 const API_URL =
 "https://script.google.com/a/macros/graas.ai/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
+
+// =====================================
+// LOG FUNCTION
+// =====================================
 
 function log(message) {
 
@@ -171,6 +196,10 @@ function log(message) {
     logs.scrollHeight;
 }
 
+// =====================================
+// PROGRESS BAR
+// =====================================
+
 function setProgress(value) {
 
   document
@@ -179,7 +208,11 @@ function setProgress(value) {
     value + "%";
 }
 
-function readFile(file) {
+// =====================================
+// READ CSV
+// =====================================
+
+function readCSV(file) {
 
   return new Promise((resolve) => {
 
@@ -200,7 +233,47 @@ function readFile(file) {
 }
 
 // =====================================
-// DYNAMIC TRACKER COLUMNS
+// READ EXCEL
+// =====================================
+
+function readExcel(file) {
+
+  return new Promise((resolve) => {
+
+    const reader =
+      new FileReader();
+
+    reader.onload =
+      function(e) {
+
+        const data =
+          new Uint8Array(
+            e.target.result
+          );
+
+        const workbook =
+          XLSX.read(data, {
+            type: "array"
+          });
+
+        const firstSheet =
+          workbook.Sheets[
+            workbook.SheetNames[0]
+          ];
+
+        const csv =
+          XLSX.utils.sheet_to_csv(firstSheet);
+
+        resolve(csv);
+      };
+
+    reader.readAsArrayBuffer(file);
+
+  });
+}
+
+// =====================================
+// TRACKER HEADER LOADING
 // =====================================
 
 document
@@ -209,59 +282,82 @@ document
     "change",
     async function(event) {
 
-      log("Reading Tracker Headers");
+      try {
 
-      const file =
-        event.target.files[0];
+        log("Reading Tracker Headers");
 
-      const text =
-        await readFile(file);
+        const file =
+          event.target.files[0];
 
-      const firstLine =
-        text.split("\n")[0];
+        let csvText = "";
 
-      const headers =
-        firstLine
-          .replace(/\r/g, "")
-          .split(",");
+        if (
+          file.name
+            .toLowerCase()
+            .endsWith(".xlsx")
+        ) {
 
-      const ecomDropdown =
-        document.getElementById("ecomColumn");
+          csvText =
+            await readExcel(file);
 
-      const launchDropdown =
-        document.getElementById("launchColumn");
+        } else {
 
-      ecomDropdown.innerHTML = "";
+          csvText =
+            await readCSV(file);
+        }
 
-      launchDropdown.innerHTML = "";
+        const firstLine =
+          csvText
+            .split("\n")[0]
+            .replace(/\r/g, "");
 
-      headers.forEach(function(header, index) {
+        const headers =
+          firstLine.split(",");
 
-        const option1 =
-          document.createElement("option");
+        const ecomDropdown =
+          document.getElementById("ecomColumn");
 
-        option1.value =
-          index;
+        const launchDropdown =
+          document.getElementById("launchColumn");
 
-        option1.text =
-          header;
+        ecomDropdown.innerHTML = "";
 
-        ecomDropdown.appendChild(option1);
+        launchDropdown.innerHTML = "";
 
-        const option2 =
-          document.createElement("option");
+        headers.forEach(function(header, index) {
 
-        option2.value =
-          index;
+          const option1 =
+            document.createElement("option");
 
-        option2.text =
-          header;
+          option1.value =
+            index;
 
-        launchDropdown.appendChild(option2);
+          option1.text =
+            header;
 
-      });
+          ecomDropdown.appendChild(option1);
 
-      log("Tracker Columns Loaded");
+          const option2 =
+            document.createElement("option");
+
+          option2.value =
+            index;
+
+          option2.text =
+            header;
+
+          launchDropdown.appendChild(option2);
+
+        });
+
+        log("Tracker Headers Loaded");
+
+      } catch(error) {
+
+        console.error(error);
+
+        alert(error.message);
+      }
     }
   );
 
@@ -271,69 +367,79 @@ document
 
 async function runValidation() {
 
-  const salesFile =
-    document.getElementById("sales").files[0];
-
-  const inventoryFile =
-    document.getElementById("inventory").files[0];
-
-  const trackerFile =
-    document.getElementById("tracker").files[0];
-
-  const contentFile =
-    document.getElementById("content").files[0];
-
-  if (
-    !salesFile ||
-    !inventoryFile ||
-    !trackerFile ||
-    !contentFile
-  ) {
-
-    alert(
-      "Please Upload All Files"
-    );
-
-    return;
-  }
-
   try {
+
+    const salesFile =
+      document.getElementById("sales").files[0];
+
+    const inventoryFile =
+      document.getElementById("inventory").files[0];
+
+    const trackerFile =
+      document.getElementById("tracker").files[0];
+
+    const contentFile =
+      document.getElementById("content").files[0];
+
+    if (
+      !salesFile ||
+      !inventoryFile ||
+      !trackerFile ||
+      !contentFile
+    ) {
+
+      alert(
+        "Please upload all files"
+      );
+
+      return;
+    }
 
     setProgress(10);
 
-    log("Reading Sales File");
+    log("Reading Sales CSV");
 
     const sales =
-      await readFile(
-        salesFile
-      );
+      await readCSV(salesFile);
 
     setProgress(20);
 
-    log("Reading Inventory File");
+    log("Reading Inventory CSV");
 
     const inventory =
-      await readFile(
-        inventoryFile
-      );
+      await readCSV(inventoryFile);
 
     setProgress(30);
 
     log("Reading Tracker File");
 
-    const tracker =
-      await readFile(
-        trackerFile
-      );
+    let tracker = "";
+
+    if (
+      trackerFile.name
+        .toLowerCase()
+        .endsWith(".xlsx")
+    ) {
+
+      tracker =
+        await readExcel(trackerFile);
+
+    } else {
+
+      tracker =
+        await readCSV(trackerFile);
+    }
 
     setProgress(40);
 
-    log("Reading Content File");
+    log("Reading Content CSV");
 
     const content =
-      await readFile(
-        contentFile
-      );
+      await readCSV(contentFile);
+
+    setProgress(50);
+
+    log("Preparing Validation");
 
     const region =
       document.getElementById("region").value;
@@ -348,35 +454,32 @@ async function runValidation() {
         document.getElementById("launchColumn").value
       );
 
-    setProgress(50);
+    setProgress(60);
 
     log("Sending Data To API");
 
     const response =
-      await fetch(
-        API_URL,
-        {
+      await fetch(API_URL, {
 
-          method: "POST",
+        method: "POST",
 
-          body:
-            JSON.stringify({
+        body:
+          JSON.stringify({
 
-              sales,
-              inventory,
-              tracker,
-              content,
-              region,
-              ecomColumn,
-              launchColumn
+            sales,
+            inventory,
+            tracker,
+            content,
+            region,
+            ecomColumn,
+            launchColumn
 
-            })
-        }
-      );
+          })
+      });
 
     setProgress(80);
 
-    log("Generating Output");
+    log("Generating Output CSV");
 
     const csv =
       await response.text();
