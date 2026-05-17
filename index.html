@@ -25,7 +25,6 @@ body{
   background:white;
   padding:30px;
   border-radius:12px;
-  box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
 
 .grid{
@@ -34,68 +33,27 @@ body{
   gap:20px;
 }
 
-label{
-  font-weight:bold;
-  display:block;
-  margin-top:15px;
-}
-
 input,
 select,
 button{
-
   width:100%;
   padding:12px;
-  margin-top:8px;
-  box-sizing:border-box;
+  margin-top:10px;
 }
 
 button{
-
   background:#4285F4;
   color:white;
   border:none;
   cursor:pointer;
-  margin-top:25px;
-  font-size:16px;
-}
-
-button:hover{
-  background:#3367D6;
-}
-
-.progress{
-  width:100%;
-  background:#ddd;
-  height:25px;
-  border-radius:5px;
-  overflow:hidden;
-  margin-top:20px;
-}
-
-.progress-bar{
-  height:100%;
-  width:0%;
-  background:#4285F4;
-  transition:0.3s;
 }
 
 .logs{
   margin-top:20px;
   background:#f8f8f8;
-  padding:15px;
-  height:250px;
+  height:220px;
   overflow:auto;
-  border:1px solid #ddd;
-  border-radius:6px;
-}
-
-.success{
-  color:green;
-}
-
-.error{
-  color:red;
+  padding:15px;
 }
 
 </style>
@@ -111,120 +69,33 @@ button:hover{
 <div class="grid">
 
 <div>
-
-<label>Region</label>
-
-<select id="region">
-
-<option value="SG">SG</option>
-<option value="MY">MY</option>
-<option value="PH">PH</option>
-
-</select>
-
+<label>Sales ZIP/XLSX</label>
+<input type="file" id="sales">
 </div>
 
 <div>
-
-<label>Tracker Sheet</label>
-
-<select id="trackerSheet"></select>
-
-</div>
-
-</div>
-
-<hr>
-
-<div class="grid">
-
-<div>
-
-<label>Sales Report ZIP/XLSX</label>
-
-<input
-type="file"
-id="sales"
-accept=".zip,.xlsx"
-multiple>
-
+<label>Basic Info</label>
+<input type="file" id="basicInfo">
 </div>
 
 <div>
-
-<label>Basic Info CSV/XLSX</label>
-
-<input
-type="file"
-id="basicInfo"
-accept=".csv,.xlsx">
-
-</div>
-
-<div>
-
 <label>Inventory CSV</label>
-
-<input
-type="file"
-id="inventory"
-accept=".csv">
-
+<input type="file" id="inventory">
 </div>
 
 <div>
-
 <label>Product Master CSV</label>
-
-<input
-type="file"
-id="productMaster"
-accept=".csv">
-
+<input type="file" id="productMaster">
 </div>
 
 <div>
-
-<label>Content CSV/XLSX</label>
-
-<input
-type="file"
-id="content"
-accept=".csv,.xlsx">
-
+<label>Tracker</label>
+<input type="file" id="tracker">
 </div>
 
 <div>
-
-<label>Tracker CSV/XLSX</label>
-
-<input
-type="file"
-id="tracker"
-accept=".csv,.xlsx">
-
-</div>
-
-</div>
-
-<hr>
-
-<div class="grid">
-
-<div>
-
-<label>Ecom Column</label>
-
-<select id="ecomColumn"></select>
-
-</div>
-
-<div>
-
-<label>Launch Date Column</label>
-
-<select id="launchColumn"></select>
-
+<label>Content</label>
+<input type="file" id="content">
 </div>
 
 </div>
@@ -235,18 +106,7 @@ RUN VALIDATION
 
 </button>
 
-<div class="progress">
-
-<div
-class="progress-bar"
-id="progressBar">
-</div>
-
-</div>
-
-<div
-class="logs"
-id="logs">
+<div class="logs" id="logs">
 
 Waiting...
 
@@ -256,54 +116,29 @@ Waiting...
 
 <script>
 
-// ==========================================
-// APPS SCRIPT URL
-// ==========================================
-
 const API_URL =
-"https://script.google.com/macros/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
+"https://script.google.com/a/macros/graas.ai/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
 
-// ==========================================
-// GLOBAL
-// ==========================================
-
-let trackerWorkbook = null;
-
-// ==========================================
+// ======================================
 // LOG
-// ==========================================
+// ======================================
 
-function log(message,type="success"){
+function log(msg){
 
   const logs =
-    document.getElementById("logs");
+    document.getElementById(
+      "logs"
+    );
 
   logs.innerHTML +=
-    `<div class="${type}">
-      ✔ ${message}
-    </div>`;
-
-  logs.scrollTop =
-    logs.scrollHeight;
+    "<br>✔ " + msg;
 }
 
-// ==========================================
-// PROGRESS
-// ==========================================
+// ======================================
+// BASE64
+// ======================================
 
-function setProgress(value){
-
-  document
-    .getElementById("progressBar")
-    .style.width =
-    value + "%";
-}
-
-// ==========================================
-// READ CSV
-// ==========================================
-
-function readCSV(file){
+function fileToBase64(file){
 
   return new Promise((resolve)=>{
 
@@ -311,559 +146,115 @@ function readCSV(file){
       new FileReader();
 
     reader.onload =
-      e => resolve(e.target.result);
-
-    reader.readAsText(file);
-
-  });
-}
-
-// ==========================================
-// READ EXCEL
-// ==========================================
-
-function readExcel(file,sheetIndex=0){
-
-  return new Promise((resolve)=>{
-
-    const reader =
-      new FileReader();
-
-    reader.onload =
-    function(e){
-
-      const data =
-        new Uint8Array(
-          e.target.result
-        );
-
-      const workbook =
-        XLSX.read(data,{
-          type:"array"
-        });
-
-      const sheet =
-        workbook.Sheets[
-          workbook.SheetNames[
-            sheetIndex
-          ]
-        ];
-
-      const csv =
-        XLSX.utils.sheet_to_csv(
-          sheet
-        );
-
-      resolve({
-        csv,
-        workbook
-      });
-
-    };
-
-    reader.readAsArrayBuffer(file);
-
-  });
-}
-
-// ==========================================
-// CLEAN SALES REPORT
-// REMOVE TOP 2 + BOTTOM 3
-// ==========================================
-
-function cleanSalesCsv(csv){
-
-  const rows =
-    csv.split("\n");
-
-  const cleaned =
-    rows.slice(
-      2,
-      rows.length - 3
-    );
-
-  return cleaned.join("\n");
-}
-
-// ==========================================
-// READ ZIP SALES FILES
-// ==========================================
-
-async function readZipSales(file){
-
-  const zip =
-    await JSZip.loadAsync(file);
-
-  let finalCsv = "";
-
-  const files =
-    Object.keys(zip.files);
-
-  for(const filename of files){
-
-    if(
-      filename.endsWith(".xlsx")
-    ){
-
-      const blob =
-        await zip.files[
-          filename
-        ].async("blob");
-
-      const excel =
-        await readExcel(blob);
-
-      const cleaned =
-        cleanSalesCsv(
-          excel.csv
-        );
-
-      finalCsv +=
-        cleaned + "\n";
-    }
-  }
-
-  return finalCsv;
-}
-
-// ==========================================
-// TRACKER LOAD
-// ==========================================
-
-document
-.getElementById("tracker")
-.addEventListener(
-"change",
-async function(event){
-
-  try{
-
-    const file =
-      event.target.files[0];
-
-    log("Reading Tracker File");
-
-    // XLSX
-    if(
-      file.name
-      .toLowerCase()
-      .endsWith(".xlsx")
-    ){
-
-      const excel =
-        await readExcel(file);
-
-      trackerWorkbook =
-        excel.workbook;
-
-      const dropdown =
-        document.getElementById(
-          "trackerSheet"
-        );
-
-      dropdown.innerHTML = "";
-
-      trackerWorkbook.SheetNames
-      .forEach(function(sheet){
-
-        const option =
-          document.createElement(
-            "option"
-          );
-
-        option.value = sheet;
-        option.text = sheet;
-
-        dropdown.appendChild(option);
-
-      });
-
-      loadTrackerHeaders();
-
-    }
-
-    // CSV
-    else{
-
-      const csv =
-        await readCSV(file);
-
-      populateHeaders(csv);
-
-    }
-
-  }catch(error){
-
-    console.error(error);
-
-    log(error.message,"error");
-  }
-
-});
-
-// ==========================================
-// SHEET CHANGE
-// ==========================================
-
-document
-.getElementById("trackerSheet")
-.addEventListener(
-"change",
-function(){
-
-  loadTrackerHeaders();
-
-});
-
-// ==========================================
-// LOAD TRACKER HEADERS
-// ==========================================
-
-function loadTrackerHeaders(){
-
-  const sheetName =
-    document.getElementById(
-      "trackerSheet"
-    ).value;
-
-  const sheet =
-    trackerWorkbook.Sheets[
-      sheetName
-    ];
-
-  const csv =
-    XLSX.utils.sheet_to_csv(
-      sheet
-    );
-
-  populateHeaders(csv);
-
-}
-
-// ==========================================
-// POPULATE HEADERS
-// ==========================================
-
-function populateHeaders(csv){
-
-  const headers =
-    csv
-    .split("\n")[0]
-    .replace(/\r/g,"")
-    .split(",");
-
-  const ecom =
-    document.getElementById(
-      "ecomColumn"
-    );
-
-  const launch =
-    document.getElementById(
-      "launchColumn"
-    );
-
-  ecom.innerHTML = "";
-  launch.innerHTML = "";
-
-  headers.forEach(function(h,i){
-
-    const o1 =
-      document.createElement(
-        "option"
+      ()=>resolve(
+        reader.result
       );
 
-    o1.value = i;
-    o1.text = h;
-
-    ecom.appendChild(o1);
-
-    const o2 =
-      document.createElement(
-        "option"
-      );
-
-    o2.value = i;
-    o2.text = h;
-
-    launch.appendChild(o2);
+    reader.readAsDataURL(file);
 
   });
 
-  log("Tracker Headers Loaded");
-
 }
 
-// ==========================================
-// GET TRACKER CSV
-// ==========================================
-
-async function getTrackerCsv(){
-
-  const trackerFile =
-    document.getElementById(
-      "tracker"
-    ).files[0];
-
-  // XLSX
-  if(
-    trackerFile.name
-    .toLowerCase()
-    .endsWith(".xlsx")
-  ){
-
-    const sheetName =
-      document.getElementById(
-        "trackerSheet"
-      ).value;
-
-    const sheet =
-      trackerWorkbook.Sheets[
-        sheetName
-      ];
-
-    return XLSX.utils.sheet_to_csv(
-      sheet
-    );
-  }
-
-  // CSV
-  return await readCSV(
-    trackerFile
-  );
-}
-
-// ==========================================
-// RUN VALIDATION
-// ==========================================
+// ======================================
+// RUN
+// ======================================
 
 async function runValidation(){
 
   try{
 
-    setProgress(5);
+    log("Reading Files");
 
-    // ======================================
-    // SALES FILE
-    // ======================================
-
-    log("Reading Sales Report");
-
-    const salesFiles =
+    const sales =
       document.getElementById(
         "sales"
-      ).files;
+      ).files[0];
 
-    let sales = "";
-
-    for(const file of salesFiles){
-
-      // ZIP
-      if(
-        file.name
-        .toLowerCase()
-        .endsWith(".zip")
-      ){
-
-        sales +=
-          await readZipSales(file);
-
-      }
-
-      // XLSX
-      else{
-
-        const excel =
-          await readExcel(file);
-
-        sales +=
-          cleanSalesCsv(
-            excel.csv
-          );
-      }
-    }
-
-    setProgress(20);
-
-    // ======================================
-    // BASIC INFO
-    // ======================================
-
-    log("Reading Basic Info");
-
-    const basicFile =
+    const basicInfo =
       document.getElementById(
         "basicInfo"
       ).files[0];
 
-    let basicInfo = "";
-
-    if(
-      basicFile.name
-      .toLowerCase()
-      .endsWith(".xlsx")
-    ){
-
-      basicInfo =
-        (
-          await readExcel(
-            basicFile
-          )
-        ).csv;
-
-    }else{
-
-      basicInfo =
-        await readCSV(
-          basicFile
-        );
-    }
-
-    setProgress(35);
-
-    // ======================================
-    // INVENTORY
-    // ======================================
-
-    log("Reading Inventory");
-
     const inventory =
-      await readCSV(
-
-        document
-        .getElementById(
-          "inventory"
-        )
-        .files[0]
-
-      );
-
-    setProgress(45);
-
-    // ======================================
-    // PRODUCT MASTER
-    // ======================================
-
-    log("Reading Product Master");
+      document.getElementById(
+        "inventory"
+      ).files[0];
 
     const productMaster =
-      await readCSV(
+      document.getElementById(
+        "productMaster"
+      ).files[0];
 
-        document
-        .getElementById(
-          "productMaster"
-        )
-        .files[0]
+    const tracker =
+      document.getElementById(
+        "tracker"
+      ).files[0];
 
-      );
-
-    setProgress(55);
-
-    // ======================================
-    // CONTENT
-    // ======================================
-
-    log("Reading Content");
-
-    const contentFile =
+    const content =
       document.getElementById(
         "content"
       ).files[0];
 
-    let content = "";
+    log("Converting Files");
 
-    if(
-      contentFile.name
-      .toLowerCase()
-      .endsWith(".xlsx")
-    ){
+    const payload = {
 
-      content =
-        (
-          await readExcel(
-            contentFile
+      files:{
+
+        sales:
+          await fileToBase64(
+            sales
+          ),
+
+        basicInfo:
+          await fileToBase64(
+            basicInfo
+          ),
+
+        inventory:
+          await fileToBase64(
+            inventory
+          ),
+
+        productMaster:
+          await fileToBase64(
+            productMaster
+          ),
+
+        tracker:
+          await fileToBase64(
+            tracker
+          ),
+
+        content:
+          await fileToBase64(
+            content
           )
-        ).csv;
 
-    }else{
+      },
 
-      content =
-        await readCSV(
-          contentFile
-        );
-    }
+      config:{
 
-    setProgress(70);
+        ecomColumn:2,
+        launchColumn:3
 
-    // ======================================
-    // TRACKER
-    // ======================================
+      }
 
-    log("Reading Tracker");
+    };
 
-    const tracker =
-      await getTrackerCsv();
-
-    setProgress(80);
-
-    // ======================================
-    // SEND API
-    // ======================================
-
-    log("Sending Data To API");
+    log("Sending To API");
 
     const response =
       await fetch(API_URL,{
 
         method:"POST",
 
-        headers:{
-          "Content-Type":"text/plain"
-        },
-
-        body:JSON.stringify({
-
-          sales,
-          basicInfo,
-          inventory,
-          productMaster,
-          content,
-          tracker,
-
-          region:
-            document.getElementById(
-              "region"
-            ).value,
-
-          ecomColumn:
-            Number(
-              document.getElementById(
-                "ecomColumn"
-              ).value
-            ),
-
-          launchColumn:
-            Number(
-              document.getElementById(
-                "launchColumn"
-              ).value
-            )
-
-        })
+        body:JSON.stringify(
+          payload
+        )
 
       });
-
-    // ======================================
-    // RESPONSE
-    // ======================================
-
-    if(!response.ok){
-
-      throw new Error(
-        "API Error"
-      );
-    }
-
-    setProgress(95);
 
     const csv =
       await response.text();
@@ -888,9 +279,7 @@ async function runValidation(){
 
     a.click();
 
-    setProgress(100);
-
-    log("Validation Completed");
+    log("Completed");
 
   }catch(error){
 
@@ -898,7 +287,6 @@ async function runValidation(){
 
     alert(error.message);
 
-    log(error.message,"error");
   }
 
 }
