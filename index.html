@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<title>Stock Validation PRO</title>
+
+<style>
+
+body {
+
+  font-family: Arial;
+  background: #f3f5f7;
+  padding: 40px;
+}
+
+.container {
+
+  max-width: 700px;
+  margin: auto;
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+}
+
+input,
+select,
+button {
+
+  width: 100%;
+  padding: 12px;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+button {
+
+  background: #4285F4;
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.progress {
+
+  width: 100%;
+  background: #ddd;
+  height: 25px;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.progress-bar {
+
+  height: 100%;
+  width: 0%;
+  background: #4285F4;
+}
+
+.logs {
+
+  background: #f8f8f8;
+  padding: 15px;
+  height: 150px;
+  overflow: auto;
+  font-size: 13px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🚀 STOCK VALIDATION PRO</h2>
+
+<label>Region</label>
+
+<select id="region">
+
+<option>SG</option>
+<option>MY</option>
+<option>PH</option>
+
+</select>
+
+<label>Tracker Sheet</label>
+
+<select id="trackerSheet">
+
+<option>Main</option>
+<option>Sheet2</option>
+
+</select>
+
+<label>Ecom Column Index</label>
+
+<select id="ecomColumn">
+
+<option value="1">Column B</option>
+<option value="2">Column C</option>
+<option value="3">Column D</option>
+
+</select>
+
+<label>Launch Date Column Index</label>
+
+<select id="launchColumn">
+
+<option value="2">Column C</option>
+<option value="3">Column D</option>
+<option value="4">Column E</option>
+
+</select>
+
+<hr>
+
+<label>Sales CSV</label>
+<input type="file" id="sales">
+
+<label>Inventory CSV</label>
+<input type="file" id="inventory">
+
+<label>Tracker CSV</label>
+<input type="file" id="tracker">
+
+<label>Content CSV</label>
+<input type="file" id="content">
+
+<button onclick="runValidation()">
+RUN VALIDATION
+</button>
+
+<h3>Progress</h3>
+
+<div class="progress">
+
+<div
+class="progress-bar"
+id="progressBar">
+</div>
+
+</div>
+
+<br>
+
+<div class="logs" id="logs">
+
+Waiting...
+
+</div>
+
+</div>
+
+<script>
+
+const API_URL =
+"PASTE_APPS_SCRIPT_URL";
+
+function log(message) {
+
+  const logs =
+    document.getElementById("logs");
+
+  logs.innerHTML +=
+    "<br>✔ " + message;
+
+  logs.scrollTop =
+    logs.scrollHeight;
+}
+
+function setProgress(value) {
+
+  document
+    .getElementById("progressBar")
+    .style.width =
+    value + "%";
+}
+
+function readFile(file) {
+
+  return new Promise((resolve) => {
+
+    const reader =
+      new FileReader();
+
+    reader.onload =
+      (e) => resolve(e.target.result);
+
+    reader.readAsText(file);
+  });
+}
+
+async function runValidation() {
+
+  setProgress(10);
+
+  log("Reading Sales File");
+
+  const sales =
+    await readFile(
+      document.getElementById("sales").files[0]
+    );
+
+  setProgress(20);
+
+  log("Reading Inventory File");
+
+  const inventory =
+    await readFile(
+      document.getElementById("inventory").files[0]
+    );
+
+  setProgress(30);
+
+  log("Reading Tracker File");
+
+  const tracker =
+    await readFile(
+      document.getElementById("tracker").files[0]
+    );
+
+  setProgress(40);
+
+  log("Reading Content File");
+
+  const content =
+    await readFile(
+      document.getElementById("content").files[0]
+    );
+
+  const region =
+    document.getElementById("region").value;
+
+  const ecomColumn =
+    Number(
+      document.getElementById("ecomColumn").value
+    );
+
+  const launchColumn =
+    Number(
+      document.getElementById("launchColumn").value
+    );
+
+  setProgress(50);
+
+  log("Running Validation Engine");
+
+  const response =
+    await fetch(API_URL, {
+
+      method: "POST",
+
+      body: JSON.stringify({
+
+        sales,
+        inventory,
+        tracker,
+        content,
+        region,
+        ecomColumn,
+        launchColumn
+
+      })
+
+    });
+
+  setProgress(80);
+
+  log("Generating CSV Output");
+
+  const csv =
+    await response.text();
+
+  const blob =
+    new Blob([csv], {
+
+      type: "text/csv"
+    });
+
+  const url =
+    window.URL.createObjectURL(blob);
+
+  const a =
+    document.createElement("a");
+
+  a.href = url;
+
+  a.download =
+    "validation_output.csv";
+
+  a.click();
+
+  setProgress(100);
+
+  log("Validation Completed");
+}
+
+</script>
+
+</body>
+</html>
