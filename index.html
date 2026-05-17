@@ -20,11 +20,12 @@ body{
 }
 
 .container{
-  max-width:1000px;
+  max-width:1100px;
   margin:auto;
   background:white;
   padding:30px;
   border-radius:12px;
+  box-shadow:0 0 10px rgba(0,0,0,0.1);
 }
 
 .grid{
@@ -50,11 +51,17 @@ button{
 }
 
 button{
+
   background:#4285F4;
   color:white;
   border:none;
   cursor:pointer;
   margin-top:25px;
+  font-size:16px;
+}
+
+button:hover{
+  background:#3367D6;
 }
 
 .progress{
@@ -70,15 +77,25 @@ button{
   height:100%;
   width:0%;
   background:#4285F4;
+  transition:0.3s;
 }
 
 .logs{
   margin-top:20px;
   background:#f8f8f8;
   padding:15px;
-  height:220px;
+  height:250px;
   overflow:auto;
   border:1px solid #ddd;
+  border-radius:6px;
+}
+
+.success{
+  color:green;
+}
+
+.error{
+  color:red;
 }
 
 </style>
@@ -99,9 +116,9 @@ button{
 
 <select id="region">
 
-<option>SG</option>
-<option>MY</option>
-<option>PH</option>
+<option value="SG">SG</option>
+<option value="MY">MY</option>
+<option value="PH">PH</option>
 
 </select>
 
@@ -239,30 +256,40 @@ Waiting...
 
 <script>
 
+// ==========================================
+// APPS SCRIPT URL
+// ==========================================
+
 const API_URL =
-"https://script.google.com/a/macros/graas.ai/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
+"https://script.google.com/macros/s/AKfycbx6N9dCiql07GI8HT6yPLIXL1JF0KOH6ljgKmPIAM9w5STqvxK7G0BJyNXmstpPoaqQuA/exec";
+
+// ==========================================
+// GLOBAL
+// ==========================================
 
 let trackerWorkbook = null;
 
-// ====================================
+// ==========================================
 // LOG
-// ====================================
+// ==========================================
 
-function log(message){
+function log(message,type="success"){
 
   const logs =
     document.getElementById("logs");
 
   logs.innerHTML +=
-    "<br>✔ " + message;
+    `<div class="${type}">
+      ✔ ${message}
+    </div>`;
 
   logs.scrollTop =
     logs.scrollHeight;
 }
 
-// ====================================
+// ==========================================
 // PROGRESS
-// ====================================
+// ==========================================
 
 function setProgress(value){
 
@@ -272,9 +299,9 @@ function setProgress(value){
     value + "%";
 }
 
-// ====================================
+// ==========================================
 // READ CSV
-// ====================================
+// ==========================================
 
 function readCSV(file){
 
@@ -291,9 +318,9 @@ function readCSV(file){
   });
 }
 
-// ====================================
-// READ XLSX
-// ====================================
+// ==========================================
+// READ EXCEL
+// ==========================================
 
 function readExcel(file,sheetIndex=0){
 
@@ -339,10 +366,10 @@ function readExcel(file,sheetIndex=0){
   });
 }
 
-// ====================================
+// ==========================================
 // CLEAN SALES REPORT
 // REMOVE TOP 2 + BOTTOM 3
-// ====================================
+// ==========================================
 
 function cleanSalesCsv(csv){
 
@@ -358,9 +385,9 @@ function cleanSalesCsv(csv){
   return cleaned.join("\n");
 }
 
-// ====================================
+// ==========================================
 // READ ZIP SALES FILES
-// ====================================
+// ==========================================
 
 async function readZipSales(file){
 
@@ -393,17 +420,15 @@ async function readZipSales(file){
 
       finalCsv +=
         cleaned + "\n";
-
     }
-
   }
 
   return finalCsv;
 }
 
-// ====================================
+// ==========================================
 // TRACKER LOAD
-// ====================================
+// ==========================================
 
 document
 .getElementById("tracker")
@@ -411,52 +436,74 @@ document
 "change",
 async function(event){
 
-  const file =
-    event.target.files[0];
+  try{
 
-  if(
-    file.name
-    .toLowerCase()
-    .endsWith(".xlsx")
-  ){
+    const file =
+      event.target.files[0];
 
-    const excel =
-      await readExcel(file);
+    log("Reading Tracker File");
 
-    trackerWorkbook =
-      excel.workbook;
+    // XLSX
+    if(
+      file.name
+      .toLowerCase()
+      .endsWith(".xlsx")
+    ){
 
-    const dropdown =
-      document.getElementById(
-        "trackerSheet"
-      );
+      const excel =
+        await readExcel(file);
 
-    dropdown.innerHTML = "";
+      trackerWorkbook =
+        excel.workbook;
 
-    trackerWorkbook.SheetNames
-    .forEach(function(sheet){
-
-      const option =
-        document.createElement(
-          "option"
+      const dropdown =
+        document.getElementById(
+          "trackerSheet"
         );
 
-      option.value = sheet;
-      option.text = sheet;
+      dropdown.innerHTML = "";
 
-      dropdown.appendChild(option);
+      trackerWorkbook.SheetNames
+      .forEach(function(sheet){
 
-    });
+        const option =
+          document.createElement(
+            "option"
+          );
 
-    loadTrackerHeaders();
+        option.value = sheet;
+        option.text = sheet;
 
+        dropdown.appendChild(option);
+
+      });
+
+      loadTrackerHeaders();
+
+    }
+
+    // CSV
+    else{
+
+      const csv =
+        await readCSV(file);
+
+      populateHeaders(csv);
+
+    }
+
+  }catch(error){
+
+    console.error(error);
+
+    log(error.message,"error");
   }
 
 });
 
-// ====================================
-// TRACKER SHEET CHANGE
-// ====================================
+// ==========================================
+// SHEET CHANGE
+// ==========================================
 
 document
 .getElementById("trackerSheet")
@@ -468,9 +515,9 @@ function(){
 
 });
 
-// ====================================
+// ==========================================
 // LOAD TRACKER HEADERS
-// ====================================
+// ==========================================
 
 function loadTrackerHeaders(){
 
@@ -489,9 +536,20 @@ function loadTrackerHeaders(){
       sheet
     );
 
+  populateHeaders(csv);
+
+}
+
+// ==========================================
+// POPULATE HEADERS
+// ==========================================
+
+function populateHeaders(csv){
+
   const headers =
     csv
     .split("\n")[0]
+    .replace(/\r/g,"")
     .split(",");
 
   const ecom =
@@ -531,17 +589,62 @@ function loadTrackerHeaders(){
 
   });
 
+  log("Tracker Headers Loaded");
+
 }
 
-// ====================================
-// RUN
-// ====================================
+// ==========================================
+// GET TRACKER CSV
+// ==========================================
+
+async function getTrackerCsv(){
+
+  const trackerFile =
+    document.getElementById(
+      "tracker"
+    ).files[0];
+
+  // XLSX
+  if(
+    trackerFile.name
+    .toLowerCase()
+    .endsWith(".xlsx")
+  ){
+
+    const sheetName =
+      document.getElementById(
+        "trackerSheet"
+      ).value;
+
+    const sheet =
+      trackerWorkbook.Sheets[
+        sheetName
+      ];
+
+    return XLSX.utils.sheet_to_csv(
+      sheet
+    );
+  }
+
+  // CSV
+  return await readCSV(
+    trackerFile
+  );
+}
+
+// ==========================================
+// RUN VALIDATION
+// ==========================================
 
 async function runValidation(){
 
   try{
 
-    setProgress(10);
+    setProgress(5);
+
+    // ======================================
+    // SALES FILE
+    // ======================================
 
     log("Reading Sales Report");
 
@@ -554,14 +657,20 @@ async function runValidation(){
 
     for(const file of salesFiles){
 
+      // ZIP
       if(
-        file.name.endsWith(".zip")
+        file.name
+        .toLowerCase()
+        .endsWith(".zip")
       ){
 
         sales +=
           await readZipSales(file);
 
-      }else{
+      }
+
+      // XLSX
+      else{
 
         const excel =
           await readExcel(file);
@@ -573,7 +682,11 @@ async function runValidation(){
       }
     }
 
-    setProgress(25);
+    setProgress(20);
+
+    // ======================================
+    // BASIC INFO
+    // ======================================
 
     log("Reading Basic Info");
 
@@ -585,7 +698,9 @@ async function runValidation(){
     let basicInfo = "";
 
     if(
-      basicFile.name.endsWith(".xlsx")
+      basicFile.name
+      .toLowerCase()
+      .endsWith(".xlsx")
     ){
 
       basicInfo =
@@ -603,29 +718,49 @@ async function runValidation(){
         );
     }
 
-    setProgress(40);
+    setProgress(35);
+
+    // ======================================
+    // INVENTORY
+    // ======================================
 
     log("Reading Inventory");
 
     const inventory =
       await readCSV(
-        document.getElementById(
+
+        document
+        .getElementById(
           "inventory"
-        ).files[0]
+        )
+        .files[0]
+
       );
 
-    setProgress(50);
+    setProgress(45);
+
+    // ======================================
+    // PRODUCT MASTER
+    // ======================================
 
     log("Reading Product Master");
 
     const productMaster =
       await readCSV(
-        document.getElementById(
+
+        document
+        .getElementById(
           "productMaster"
-        ).files[0]
+        )
+        .files[0]
+
       );
 
-    setProgress(60);
+    setProgress(55);
+
+    // ======================================
+    // CONTENT
+    // ======================================
 
     log("Reading Content");
 
@@ -637,7 +772,9 @@ async function runValidation(){
     let content = "";
 
     if(
-      contentFile.name.endsWith(".xlsx")
+      contentFile.name
+      .toLowerCase()
+      .endsWith(".xlsx")
     ){
 
       content =
@@ -657,31 +794,31 @@ async function runValidation(){
 
     setProgress(70);
 
+    // ======================================
+    // TRACKER
+    // ======================================
+
     log("Reading Tracker");
 
-    const sheetName =
-      document.getElementById(
-        "trackerSheet"
-      ).value;
-
-    const trackerSheet =
-      trackerWorkbook.Sheets[
-        sheetName
-      ];
-
     const tracker =
-      XLSX.utils.sheet_to_csv(
-        trackerSheet
-      );
+      await getTrackerCsv();
 
     setProgress(80);
 
-    log("Sending To API");
+    // ======================================
+    // SEND API
+    // ======================================
+
+    log("Sending Data To API");
 
     const response =
       await fetch(API_URL,{
 
         method:"POST",
+
+        headers:{
+          "Content-Type":"text/plain"
+        },
 
         body:JSON.stringify({
 
@@ -714,6 +851,17 @@ async function runValidation(){
         })
 
       });
+
+    // ======================================
+    // RESPONSE
+    // ======================================
+
+    if(!response.ok){
+
+      throw new Error(
+        "API Error"
+      );
+    }
 
     setProgress(95);
 
@@ -750,7 +898,7 @@ async function runValidation(){
 
     alert(error.message);
 
-    log(error.message);
+    log(error.message,"error");
   }
 
 }
